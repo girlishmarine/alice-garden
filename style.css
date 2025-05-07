@@ -1,0 +1,28 @@
+body {
+  margin: 0;
+  background: #000;
+  color: #fff;
+  font-family: cursive;
+  text-align: center;
+  background-image: url('images/background.jpg'); /* 你的背景图 */
+  background-size: cover;
+  background-position: center;
+}
+
+.container {
+  padding-top: 60px;
+}
+
+.gate-container {
+  margin-top: 40px;
+}
+
+.gate-img {
+  width: 150px;
+  margin: 0 20px;
+  transition: transform 0.3s ease;
+}
+
+.gate-img:hover {
+  transform: scale(1.1);
+}
