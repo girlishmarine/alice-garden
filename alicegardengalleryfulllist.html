@@ -1,0 +1,207 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<title>爱丽丝庭院 · Gallery</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@300;500;700&display=swap" rel="stylesheet">
+<style>
+  :root{--primary:#c689d8;--bg:#fdf6f0;--text:#5b3e6d;}
+  *{margin:0;padding:0;box-sizing:border-box;}
+  body{font-family:'Noto Sans SC',sans-serif;background:linear-gradient(135deg,#fdf6f0 0%,#e6f0fa 50%,#f0e6fa 100%);background-attachment:fixed;color:var(--text);min-height:100vh;overflow-x:hidden;position:relative;}
+  #particles{position:fixed;top:0;left:0;width:100%;height:100%;z-index:-1;}
+  h1{text-align:center;padding:30px 20px 10px;font-size:2.8em;color:transparent;background:linear-gradient(90deg,#b284d1,#8f6ab8);-webkit-background-clip:text;background-clip:text;text-shadow:0 2px 10px rgba(139,105,181,0.3);}
+  .subtitle{text-align:center;margin-bottom:20px;color:#9a7bb0;font-weight:300;}
+  .tabs{display:flex;justify-content:center;flex-wrap:wrap;gap:12px;padding:0 20px;margin-bottom:25px;}
+  .tab{padding:10px 20px;background:rgba(255,255,255,0.7);backdrop-filter:blur(10px);border-radius:30px;cursor:pointer;transition:all .3s;font-weight:500;box-shadow:0 4px 15px rgba(0,0,0,.1);}
+  .tab:hover{transform:translateY(-3px);}
+  .tab.active{background:var(--primary);color:white;box-shadow:0 8px 25px rgba(198,137,216,.4);}
+  #gallery{column-count:2;column-gap:20px;padding:0 20px;max-width:1600px;margin:0 auto;}
+  @media(min-width:768px){#gallery{column-count:3;}}
+  @media(min-width:1024px){#gallery{column-count:4;}}
+  @media(min-width:1400px){#gallery{column-count:5;}}
+  .card{display:inline-block;width:100%;margin-bottom:20px;background:white;border-radius:18px;overflow:hidden;box-shadow:0 8px 25px rgba(0,0,0,.12);transition:all .4s cubic-bezier(0.175,0.885,0.32,1.1);break-inside:avoid;cursor:pointer;}
+  .card:hover{transform:translateY(-12px) scale(1.02);box-shadow:0 20px 40px rgba(139,105,181,.25);}
+  .card img{width:100%;height:auto;display:block;background:#f0e8f5;}
+  .admin-bar{position:fixed;bottom:20px;right:20px;z-index:100;}
+  .admin-btn{padding:12px 20px;background:rgba(139,105,181,0.9);color:white;border:none;border-radius:30px;cursor:pointer;backdrop-filter:blur(10px);box-shadow:0 8px 25px rgba(0,0,0,0.3);font-weight:bold;}
+  .stats{text-align:center;margin:20px;color:#9a7bb0;font-size:14px;}
+
+  /* Google Drive 官方预览弹层 */
+  #overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,0.95);backdrop-filter:blur(15px);z-index:999;justify-content:center;align-items:center;padding:20px;cursor:pointer;flex-direction:column;gap:15px;}
+  #drivePreview{width:94vw;height:94vh;border:none;border-radius:16px;box-shadow:0 20px 60px rgba(0,0,0,0.8);}
+
+  /* 新增：优雅的关闭按钮 */
+  .close-btn{
+    position:absolute;top:20px;right:30px;width:50px;height:50px;background:rgba(255,255,255,0.15);
+    backdrop-filter:blur(10px);border-radius:50%;display:flex;align-items:center;justify-content:center;
+    font-size:28px;color:white;cursor:pointer;z-index:1000;transition:all .3s;user-select:none;
+  }
+  .close-btn:hover{background:rgba(255,255,255,0.3);transform:scale(1.1);}
+</style>
+</head>
+<body>
+<div id="particles"></div>
+<h1>爱丽丝庭院</h1>
+<p class="subtitle">Alice's Garden · 梦幻相册（防盗版预览模式）</p>
+
+<div class="tabs" id="level1-tabs"></div>
+<div class="tabs" id="level2-tabs" style="display:none;"></div>
+<div class="tabs" id="level3-tabs" style="display:none;"></div>
+
+<div class="stats" id="stats">加载中...</div>
+<div id="gallery"></div>
+
+<!-- 预览层：支持三种关闭方式 -->
+<div id="overlay">
+  <div class="close-btn" onclick="closePreview()">×</div>
+  <iframe id="drivePreview" src="" allow="fullscreen"></iframe>
+</div>
+
+<div class="admin-bar">
+  <button class="admin-btn" onclick="refreshData()">刷新相册</button>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/macy@2.5.1/dist/macy.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/particles.js@2.0.0/particles.min.js"></script>
+<script>
+// ==================== 配置区 ====================
+const WEB_APP_URL = 'https://script.google.com/macros/s/AKfycbzHKJJH59ZxDC8SP0lYNSPN6UgT_VBjuslqMvrO5TcJr6U7eay66wocyZMqtkqz4pTJ/exec';
+const REFRESH_TOKEN = 'AliceGarden_8f3k9xL2mPqR7tVy2025!';
+// ================================================
+let images = [];
+let currentPath = [];
+
+particlesJS('particles', {particles:{number:{value:60,density:{enable:true,value_area:800}},color:{value:['#d8b8f0','#b284d1','#e6f0fa']},shape:{type:'circle'},opacity:{value:0.4,random:true},size:{value:4,random:true},line_linked:{enable:false},move:{enable:true,speed:0.8,direction:'none',random:true}},interactivity:{detect_on:'canvas',events:{resize:true}}});
+
+document.addEventListener('contextmenu', e => e.preventDefault());
+document.addEventListener('dragstart', e => e.preventDefault());
+
+// ============ 新增：统一关闭函数 ============
+function closePreview() {
+  const overlay = document.getElementById('overlay');
+  overlay.style.display = 'none';
+  document.getElementById('drivePreview').src = ''; // 清空iframe，避免后台继续加载
+}
+
+// 点击背景关闭
+document.getElementById('overlay').addEventListener('click', function(e) {
+  if (e.target === this) closePreview();
+});
+
+// 按 Esc 键关闭
+document.addEventListener('keydown', function(e) {
+  if (e.key === 'Escape') closePreview();
+});
+// =============================================
+
+async function loadData() {
+  try {
+    const res = await fetch(WEB_APP_URL);
+    const data = await res.json();
+    images = data.images || [];
+    buildBreadcrumbTabs();
+    renderCurrentFolder();
+    updateStats();
+  } catch (err) {
+    document.getElementById('stats').textContent = '加载失败，请刷新页面';
+  }
+}
+
+/* 面包屑导航（保持不变） */
+function buildBreadcrumbTabs() {
+  const paths = [...new Set(images.map(i => i.folder))];
+  const level1 = [...new Set(paths.map(p => p.split('/')[0]))].sort();
+  const l1 = document.getElementById('level1-tabs');
+  const l2 = document.getElementById('level2-tabs');
+  const l3 = document.getElementById('level3-tabs');
+  l1.innerHTML = ''; l2.innerHTML = ''; l3.innerHTML = '';
+  l2.style.display = 'none'; l3.style.display = 'none';
+
+  level1.forEach(folder => {
+    const tab = document.createElement('div');
+    tab.className = 'tab' + (currentPath[0] === folder ? ' active' : '');
+    tab.textContent = folder;
+    tab.onclick = () => { currentPath = [folder]; buildBreadcrumbTabs(); renderCurrentFolder(); };
+    l1.appendChild(tab);
+  });
+
+  if (currentPath.length >= 1) {
+    const parent = images.filter(i => i.folder.startsWith(currentPath[0] + '/'));
+    const level2 = [...new Set(parent.map(i => i.folder.split('/').slice(0,2).join('/')))].filter(p => p !== currentPath[0]);
+    if (level2.length > 0) { l2.style.display = 'flex'; level2.forEach(folder => {
+      const name = folder.split('/')[1];
+      const tab = document.createElement('div');
+      tab.className = 'tab' + (currentPath[1] === name ? ' active' : '');
+      tab.textContent = name;
+      tab.onclick = () => { currentPath = [currentPath[0], name]; buildBreadcrumbTabs(); renderCurrentFolder(); };
+      l2.appendChild(tab);
+    });}}
+  if (currentPath.length >= 2) {
+    const parent = images.filter(i => i.folder.startsWith(currentPath.slice(0,2).join('/') + '/'));
+    const level3 = [...new Set(parent.map(i => i.folder.split('/').slice(0,3).join('/')))].filter(p => p !== currentPath.slice(0,2).join('/'));
+    if (level3.length > 0) { l3.style.display = 'flex'; level3.forEach(folder => {
+      const name = folder.split('/')[2];
+      const tab = document.createElement('div');
+      tab.className = 'tab' + (currentPath[2] === name ? ' active' : '');
+      tab.textContent = name;
+      tab.onclick = () => { currentPath = [currentPath[0], currentPath[1], name]; buildBreadcrumbTabs(); renderCurrentFolder(); };
+      l3.appendChild(tab);
+    });}}
+}
+
+function renderCurrentFolder() {
+  const gallery = document.getElementById('gallery');
+  gallery.innerHTML = '';
+
+  let currentImages = images;
+  if (currentPath.length > 0) {
+    const prefix = currentPath.join('/');
+    currentImages = images.filter(i => i.folder === prefix || i.folder.startsWith(prefix + '/'));
+  }
+
+  if (currentImages.length === 0) {
+    gallery.innerHTML = '<p style="text-align:center;color:#aaa;margin:60px;font-size:1.2em;">空空如也～</p>';
+    return;
+  }
+
+  currentImages.forEach(img => {
+    const card = document.createElement('div');
+    card.className = 'card';
+    card.innerHTML = `<img src="${img.thumb}" loading="lazy" alt="">`;
+    
+    card.onclick = (e) => {
+      e.stopPropagation();
+      const fileId = img.direct.match(/id=([^&]+)/)[1];
+      const previewUrl = `https://drive.google.com/file/d/${fileId}/preview`;
+      document.getElementById('drivePreview').src = previewUrl;
+      document.getElementById('overlay').style.display = 'flex';
+    };
+    gallery.appendChild(card);
+  });
+
+  setTimeout(() => new Macy({container:'#gallery',mobileFirst:true,columns:2,breakAt:{520:2,768:3,1024:4,1400:5},margin:20}), 100);
+}
+
+function updateStats() {
+  document.getElementById('stats').textContent = 
+    `共 ${images.length} 张照片${currentPath.length > 0 ? ` · 当前：${currentPath.join(' → ')}` : ''}`;
+}
+
+async function refreshData() {
+  if (!confirm('确定要刷新相册数据吗？')) return;
+  const btn = event.target;
+  btn.disabled = true; btn.textContent = '刷新中...';
+  try {
+    await fetch(`${WEB_APP_URL}?action=refresh&token=${REFRESH_TOKEN}`);
+    setTimeout(() => location.reload(), 3000);
+  } catch (e) {
+    alert('刷新失败'); btn.disabled = false; btn.textContent = '刷新相册';
+  }
+}
+
+loadData();
+</script>
+</body>
+</html>
