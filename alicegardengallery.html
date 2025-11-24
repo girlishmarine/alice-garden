@@ -29,8 +29,16 @@
   .stats{text-align:center;margin:20px;color:#9a7bb0;font-size:14px;}
 
   /* Google Drive 官方预览弹层 */
-  #overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,0.95);backdrop-filter:blur(15px);z-index:999;justify-content:center;align-items:center;padding:20px;cursor:pointer;}
+  #overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,0.95);backdrop-filter:blur(15px);z-index:999;justify-content:center;align-items:center;padding:20px;cursor:pointer;flex-direction:column;gap:15px;}
   #drivePreview{width:94vw;height:94vh;border:none;border-radius:16px;box-shadow:0 20px 60px rgba(0,0,0,0.8);}
+
+  /* 新增：优雅的关闭按钮 */
+  .close-btn{
+    position:absolute;top:20px;right:30px;width:50px;height:50px;background:rgba(255,255,255,0.15);
+    backdrop-filter:blur(10px);border-radius:50%;display:flex;align-items:center;justify-content:center;
+    font-size:28px;color:white;cursor:pointer;z-index:1000;transition:all .3s;user-select:none;
+  }
+  .close-btn:hover{background:rgba(255,255,255,0.3);transform:scale(1.1);}
 </style>
 </head>
 <body>
@@ -45,8 +53,9 @@
 <div class="stats" id="stats">加载中...</div>
 <div id="gallery"></div>
 
-<!-- 使用 Google Drive 官方预览，彻底防下载 -->
-<div id="overlay" onclick="this.style.display='none'">
+<!-- 预览层：支持三种关闭方式 -->
+<div id="overlay">
+  <div class="close-btn" onclick="closePreview()">×</div>
   <iframe id="drivePreview" src="" allow="fullscreen"></iframe>
 </div>
 
@@ -69,6 +78,24 @@ particlesJS('particles', {particles:{number:{value:60,density:{enable:true,value
 document.addEventListener('contextmenu', e => e.preventDefault());
 document.addEventListener('dragstart', e => e.preventDefault());
 
+// ============ 新增：统一关闭函数 ============
+function closePreview() {
+  const overlay = document.getElementById('overlay');
+  overlay.style.display = 'none';
+  document.getElementById('drivePreview').src = ''; // 清空iframe，避免后台继续加载
+}
+
+// 点击背景关闭
+document.getElementById('overlay').addEventListener('click', function(e) {
+  if (e.target === this) closePreview();
+});
+
+// 按 Esc 键关闭
+document.addEventListener('keydown', function(e) {
+  if (e.key === 'Escape') closePreview();
+});
+// =============================================
+
 async function loadData() {
   try {
     const res = await fetch(WEB_APP_URL);
@@ -82,7 +109,7 @@ async function loadData() {
   }
 }
 
-/* 面包屑导航保持不变 */
+/* 面包屑导航（保持不变） */
 function buildBreadcrumbTabs() {
   const paths = [...new Set(images.map(i => i.folder))];
   const level1 = [...new Set(paths.map(p => p.split('/')[0]))].sort();
@@ -103,7 +130,7 @@ function buildBreadcrumbTabs() {
   if (currentPath.length >= 1) {
     const parent = images.filter(i => i.folder.startsWith(currentPath[0] + '/'));
     const level2 = [...new Set(parent.map(i => i.folder.split('/').slice(0,2).join('/')))].filter(p => p !== currentPath[0]);
-    if (level2.length > 0) { l2.style.display = 'flex'; level2.forEach(folder => { /* 同上 */ 
+    if (level2.length > 0) { l2.style.display = 'flex'; level2.forEach(folder => {
       const name = folder.split('/')[1];
       const tab = document.createElement('div');
       tab.className = 'tab' + (currentPath[1] === name ? ' active' : '');
@@ -144,10 +171,9 @@ function renderCurrentFolder() {
     card.className = 'card';
     card.innerHTML = `<img src="${img.thumb}" loading="lazy" alt="">`;
     
-    // 关键：点击后用 Google Drive 官方预览 iframe 打开
     card.onclick = (e) => {
       e.stopPropagation();
-      const fileId = img.direct.match(/id=([^&]+)/)[1];  // 从 uc?export=view&id=xxx 提取 id
+      const fileId = img.direct.match(/id=([^&]+)/)[1];
       const previewUrl = `https://drive.google.com/file/d/${fileId}/preview`;
       document.getElementById('drivePreview').src = previewUrl;
       document.getElementById('overlay').style.display = 'flex';
