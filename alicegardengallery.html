@@ -1,0 +1,366 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<title>爱丽丝庭院 · Gallery</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@300;500;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --primary: #c689d8;
+    --primary-dark: #a567c0;
+    --bg: #fdf6f0;
+    --text: #5b3e6d;
+  }
+  * { margin:0; padding:0; box-sizing:border-box; }
+  body {
+    font-family: 'Noto Sans SC', -apple-system, sans-serif;
+    background: linear-gradient(135deg, #fdf6f0 0%, #e6f0fa 50%, #f0e6fa 100%);
+    background-attachment: fixed;
+    color: var(--text);
+    min-height: 100vh;
+    position: relative;
+    overflow-x: hidden;
+  }
+  /* 粒子背景 */
+  #particles {
+    position: fixed; top:0; left:0; width:100%; height:100%; z-index: -1;
+  }
+  h1 {
+    text-align: center;
+    padding: 30px 20px 10px;
+    font-size: 2.8em;
+    color: transparent;
+    background: linear-gradient(90deg, #b284d1, #8f6ab8);
+    -webkit-background-clip: text;
+    background-clip: text;
+    text-shadow: 0 2px 10px rgba(139,105,181,0.3);
+  }
+  .subtitle {
+    text-align: center;
+    margin-bottom: 20px;
+    color: #9a7bb0;
+    font-weight: 300;
+  }
+
+  /* Tab */
+  .tabs {
+    display: flex;
+    justify-content: center;
+    flex-wrap: wrap;
+    gap: 12px;
+    padding: 0 20px;
+    margin-bottom: 25px;
+  }
+  .tab {
+    padding: 10px 20px;
+    background: rgba(255,255,255,0.7);
+    backdrop-filter: blur(10px);
+    border-radius: 30px;
+    cursor: pointer;
+    transition: all 0.3s;
+    font-weight: 500;
+    box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+  }
+  .tab:hover { transform: translateY(-3px); }
+  .tab.active {
+    background: var(--primary);
+    color: white;
+    box-shadow: 0 8px 25px rgba(198,137,216,0.4);
+  }
+
+  /* 瀑布流容器 */
+  #gallery {
+    column-count: 2;
+    column-gap: 20px;
+    padding: 0 20px;
+    max-width: 1600px;
+    margin: 0 auto;
+  }
+  @media (min-width: 768px) { #gallery { column-count: 3; } }
+  @media (min-width: 1024px) { #gallery { column-count: 4; } }
+  @media (min-width: 1400px) { #gallery { column-count: 5; } }
+
+  .card {
+    display: inline-block;
+    width: 100%;
+    margin-bottom: 20px;
+    background: white;
+    border-radius: 18px;
+    overflow: hidden;
+    box-shadow: 0 8px 25px rgba(0,0,0,0.12);
+    transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.1);
+    break-inside: avoid;
+    cursor: pointer;
+  }
+  .card:hover {
+    transform: translateY(-12px) scale(1.02);
+    box-shadow: 0 20px 40px rgba(139,105,181,0.25);
+  }
+  .card img {
+    width: 100%;
+    height: auto;
+    display: block;
+    background: #f0e8f5;
+  }
+  .card .info {
+    padding: 12px 16px;
+    font-size: 14px;
+    background: linear-gradient(to top, rgba(255,255,255,0.95), white);
+  }
+  .card .name { font-weight: 500; margin-bottom: 4px; }
+  .card .time { color: #aaa; font-size: 12px; }
+
+  /* 加载骨架 */
+  .skeleton {
+    background: linear-gradient(90deg, #f0e8f5 25%, #e0d8e8 50%, #f0e8f5 75%);
+    background-size: 200% 100%;
+    animation: loading 1.8s infinite;
+  }
+  @keyframes loading { 0% {background-position:200% 0;} 100% {background-position:-200% 0;} }
+
+  /* 放大预览 */
+  #overlay {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.92);
+    backdrop-filter: blur(10px);
+    z-index: 999;
+    justify-content: center;
+    align-items: center;
+    flex-direction: column;
+    gap: 20px;
+    padding: 20px;
+  }
+  #overlayImg {
+    max-width: 94%;
+    max-height: 86vh;
+    border-radius: 16px;
+    box-shadow: 0 20px 60px rgba(0,0,0,0.6);
+  }
+  .overlay-nav {
+    color: white;
+    font-size: 42px;
+    cursor: pointer;
+    user-select: none;
+    padding: 0 20px;
+    opacity: 0.8;
+  }
+  .overlay-nav:hover { opacity: 1; }
+
+  /* 刷新按钮（管理员） */
+  .admin-bar {
+    position: fixed;
+    bottom: 20px;
+    right: 20px;
+    z-index: 100;
+    display: flex;
+    gap: 10px;
+  }
+  .admin-btn {
+    padding: 12px 20px;
+    background: rgba(139,105,181,0.9);
+    color: white;
+    border: none;
+    border-radius: 30px;
+    cursor: pointer;
+    backdrop-filter: blur(10px);
+    box-shadow: 0 8px 25px rgba(0,0,0,0.3);
+    font-weight: bold;
+  }
+
+  /* 统计信息 */
+  .stats {
+    text-align: center;
+    margin: 20px;
+    color: #9a7bb0;
+    font-size: 14px;
+  }
+</style>
+</head>
+<body>
+
+<div id="particles"></div>
+
+<h1>爱丽丝庭院</h1>
+<p class="subtitle">Alice's Garden · 梦幻相册</p>
+
+<div class="tabs" id="tabs"></div>
+<div class="stats" id="stats">加载中...</div>
+
+<div id="gallery"></div>
+
+<!-- 放大层 -->
+<div id="overlay">
+  <div class="overlay-nav" id="prevBtn">←</div>
+  <img id="overlayImg" src="" alt="">
+  <div class="overlay-nav" id="nextBtn">→</div>
+</div>
+
+<!-- 管理员刷新按钮（改成你的 token） -->
+<div class="admin-bar">
+  <button class="admin-btn" onclick="refreshData()">刷新相册</button>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/macy@2.5.1/dist/macy.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/particles.js@2.0.0/particles.min.js"></script>
+
+<script>
+// ==================== 配置区 ====================
+// 把这两行改成下面这样（复制粘贴即可）
+const WEB_APP_URL = 'https://script.google.com/macros/s/AKfycbzHKJJH59ZxDC8SP0lYNSPN6UgT_VBjuslqMvrO5TcJr6U7eay66wocyZMqtkqz4pTJ/exec';
+const REFRESH_TOKEN = 'AliceGarden_8f3k9xL2mPqR7tVy2025!';
+// ================================================
+
+let images = [];
+let filtered = [];
+let currentFolder = null;
+let currentIndex = 0;
+
+// 粒子背景
+particlesJS('particles', {
+  particles: {
+    number: { value: 60, density: { enable: true, value_area: 800 } },
+    color: { value: ['#d8b8f0', '#b284d1', '#e6f0fa'] },
+    shape: { type: 'circle' },
+    opacity: { value: 0.4, random: true },
+    size: { value: 4, random: true },
+    line_linked: { enable: false },
+    move: { enable: true, speed: 0.8, direction: 'none', random: true }
+  },
+  interactivity: { detect_on: 'canvas', events: { resize: true } }
+});
+
+// 禁用右键 + 拖拽 + 快捷键
+document.addEventListener('contextmenu', e => e.preventDefault());
+document.addEventListener('dragstart', e => e.preventDefault());
+document.addEventListener('keydown', e => {
+  if (e.key === 'F12' || (e.ctrlKey && (e.key === 's' || e.key === 'u'))) e.preventDefault();
+});
+
+// 加载数据
+async function loadData() {
+  try {
+    const res = await fetch(WEB_APP_URL + (currentFolder ? `?search=${encodeURIComponent(currentFolder)}` : ''));
+    const data = await res.json();
+    images = data.images || [];
+    filtered = currentFolder ? images : images;
+    renderTabs();
+    renderGallery();
+    updateStats();
+  } catch (err) {
+    document.getElementById('stats').textContent = '加载失败，请刷新页面';
+  }
+}
+
+// 渲染分类
+function renderTabs() {
+  const tabs = document.getElementById('tabs');
+  tabs.innerHTML = '';
+  const folders = ['全部', ...new Set(images.map(i => i.folder))].sort((a,b)=> a==='全部'? -1 : b==='全部'? 1 : a.localeCompare(b));
+  
+  folders.forEach(f => {
+    const tab = document.createElement('div');
+    tab.className = 'tab' + ( (f==='全部'? !currentFolder : f===currentFolder) ? ' active' : '');
+    tab.textContent = f;
+    tab.onclick = () => {
+      currentFolder = f === '全部' ? null : f;
+      loadData(); // 重新请求更高效
+    };
+    tabs.appendChild(tab);
+  });
+}
+
+// 渲染瀑布流
+function renderGallery() {
+  const gallery = document.getElementById('gallery');
+  gallery.innerHTML = '';
+  
+  if (filtered.length === 0) {
+    gallery.innerHTML = '<p style="text-align:center;grid-column:1/-1;color:#aaa;margin:60px">空空如也～</p>';
+    return;
+  }
+
+  filtered.forEach((img, idx) => {
+    const card = document.createElement('div');
+    card.className = 'card';
+    card.innerHTML = `
+      <img src="${img.thumb}" loading="lazy" alt="${img.name}"
+           onerror="this.src='data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMzAwIiBoZWlnaHQ9IjIwMCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48cmVjdCB3aWR0aD0iMTAwJSIgaGVpZ2h0PSIxMDAlIiBmaWxsPSIjZjBlOGY1Ii8+PHRleHQgeD0iNTAlIiB5PSI1MCUiIGZvbnQtc2l6ZT0iMjAiIHRleHQtYW5jaG9yPSJtaWRkbGUiIGR5PSIuM2VtIiBmaWxsPSIjYWFhIj7otKjnirXlj4zkuLngkI3kuLngkI4gPC90ZXh0Pjwvc3ZnPg=='">
+      <div class="info">
+        <div class="name">${img.name}</div>
+        <div class="time">${new Date(img.time).toLocaleDateString('zh-CN')}</div>
+      </div>
+    `;
+    card.onclick = () => openLightbox(filtered, idx);
+    gallery.appendChild(card);
+  });
+
+  // 使用 Macy 实现完美瀑布流
+  setTimeout(() => {
+    new Macy({
+      container: '#gallery',
+      mobileFirst: true,
+      columns: 2,
+      breakAt: { 520: 2, 768: 3, 1024: 4, 1400: 5 },
+      margin: 20
+    });
+  }, 100);
+}
+
+function updateStats() {
+  document.getElementById('stats').textContent = 
+    `共 ${images.length} 张照片${currentFolder ? ` · 当前分类：${currentFolder}` : ' · 全部照片'}`;
+}
+
+// 放大lightbox
+function openLightbox(list, index) {
+  currentIndex = index;
+  const img = list[index];
+  document.getElementById('overlayImg').src = img.direct || img.thumb; // 用直链更清晰！
+  document.getElementById('overlay').style.display = 'flex';
+}
+document.getElementById('overlay').onclick = e => {
+  if (e.target.id === 'overlay') document.getElementById('overlay').style.display = 'none';
+};
+document.getElementById('prevBtn').onclick = () => {
+  currentIndex = (currentIndex - 1 + filtered.length) % filtered.length;
+  openLightbox(filtered, currentIndex);
+};
+document.getElementById('nextBtn').onclick = () => {
+  currentIndex = (currentIndex + 1) % filtered.length;
+  openLightbox(filtered, currentIndex);
+};
+document.addEventListener('keydown', e => {
+  if (document.getElementById('overlay').style.display === 'flex') {
+    if (e.key === 'ArrowLeft') document.getElementById('prevBtn').click();
+    if (e.key === 'ArrowRight') document.getElementById('nextBtn').click();
+    if (e.key === 'Escape') document.getElementById('overlay').style.display = 'none';
+  }
+});
+
+// 一键刷新（管理员）
+async function refreshData() {
+  if (!confirm('确定要刷新相册数据吗？')) return;
+  const btn = event.target;
+  btn.disabled = true;
+  btn.textContent = '刷新中...';
+  try {
+    await fetch(`${WEB_APP_URL}?action=refresh&token=${REFRESH_TOKEN}`);
+    setTimeout(() => {
+      location.reload();
+    }, 3000);
+  } catch (e) {
+    alert('刷新失败');
+    btn.disabled = false;
+    btn.textContent = '刷新相册';
+  }
+}
+
+// 初始化
+loadData();
+</script>
+</body>
+</html>
