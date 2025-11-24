@@ -1,0 +1,146 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<title>爱丽丝庭院 · 成人提示 / Alice's Garden · 18+</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@300;500;700&display=swap" rel="stylesheet">
+<style>
+  body {
+    margin:0;
+    padding:0;
+    font-family:'Noto Sans SC',sans-serif;
+    height:100vh;
+    display:flex;
+    justify-content:center;
+    align-items:center;
+    background: linear-gradient(135deg,#fdf6f0 0%,#e6f0fa 50%,#f0e6fa 100%);
+    overflow:hidden;
+    position:relative;
+  }
+
+  /* 粒子/花瓣动画层 */
+  #particles {
+    position: absolute;
+    inset:0;
+    z-index:0;
+  }
+
+  .container {
+    position: relative;
+    z-index: 1;
+    text-align:center;
+    background: rgba(255,255,255,0.85);
+    backdrop-filter: blur(12px);
+    padding: 50px 30px;
+    border-radius: 25px;
+    box-shadow: 0 15px 40px rgba(139,105,181,.25);
+    max-width: 450px;
+  }
+  h1 {
+    font-size: 28px;
+    color: #5b3e6d;
+    margin-bottom: 20px;
+    background: linear-gradient(90deg,#b284d1,#8f6ab8);
+    -webkit-background-clip: text;
+    color: transparent;
+  }
+  p {
+    font-size:16px;
+    color:#7f5fa0;
+    margin-bottom: 35px;
+    line-height:1.5;
+  }
+  button {
+    margin:10px;
+    padding:14px 28px;
+    font-size:16px;
+    border:none;
+    border-radius:30px;
+    cursor:pointer;
+    background: rgba(198,137,216,0.85);
+    color:white;
+    font-weight:600;
+    transition:all .3s;
+    backdrop-filter: blur(5px);
+    box-shadow: 0 6px 20px rgba(139,105,181,.2);
+  }
+  button:hover {
+    background: rgba(198,137,216,1);
+    transform:scale(1.08);
+    box-shadow: 0 10px 25px rgba(139,105,181,.3);
+  }
+
+  /* 浮动小花瓣/光点动画 */
+  .particle {
+    position:absolute;
+    width:12px;
+    height:12px;
+    background: rgba(194,144,232,0.7);
+    border-radius:50%;
+    pointer-events:none;
+    animation: float 10s linear infinite;
+  }
+  @keyframes float {
+    0% { transform: translateY(0px) rotate(0deg); opacity:1; }
+    100% { transform: translateY(-1200px) rotate(360deg); opacity:0; }
+  }
+
+  @media(max-width:480px){
+    .container { padding:30px 20px; }
+    h1{font-size:24px;}
+    p{font-size:14px;}
+    button{padding:12px 22px;font-size:14px;}
+  }
+</style>
+</head>
+<body>
+<div id="particles"></div>
+
+<div class="container">
+  <h1>爱丽丝庭院 · 成人提示</h1>
+  <p>
+    本网站包含成人内容，仅限18岁以上访问。<br>
+    This site contains adult content. You must be 18+ to enter.
+  </p>
+  <button onclick="enterSite()">我已满18岁 / I am 18+</button>
+  <button onclick="exitSite()">未满18岁 / Not 18+</button>
+</div>
+
+<script>
+const targetURL = 'https://girlishmarine.github.io/alice-garden/alicegardengallery.html';
+
+// 确认已成年
+function enterSite(){
+  localStorage.setItem('isAdult','true');
+  window.location.href = targetURL;
+}
+
+// 未成年跳出
+function exitSite(){
+  alert('您未满18岁，无法访问 / You are not 18+, access denied.');
+  window.location.href = 'https://www.google.com';
+}
+
+// 自动跳过
+if(localStorage.getItem('isAdult')==='true'){
+  window.location.href = targetURL;
+}
+
+// ================== 粒子/花瓣动画 ==================
+const particlesContainer = document.getElementById('particles');
+for(let i=0;i<30;i++){ // 生成30个花瓣粒子
+  const p = document.createElement('div');
+  p.className='particle';
+  p.style.left = Math.random()*100+'vw';
+  p.style.top = 100+Math.random()*50+'vh';
+  p.style.width = 8 + Math.random()*8+'px';
+  p.style.height = 8 + Math.random()*8+'px';
+  p.style.animationDuration = 8 + Math.random()*6+'s';
+  p.style.background = `rgba(194,144,232,${0.4 + Math.random()*0.6})`;
+  particlesContainer.appendChild(p);
+}
+</script>
+</body>
+</html>
