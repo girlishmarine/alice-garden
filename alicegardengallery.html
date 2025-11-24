@@ -24,22 +24,19 @@
   .card{display:inline-block;width:100%;margin-bottom:20px;background:white;border-radius:18px;overflow:hidden;box-shadow:0 8px 25px rgba(0,0,0,.12);transition:all .4s cubic-bezier(0.175,0.885,0.32,1.1);break-inside:avoid;cursor:pointer;}
   .card:hover{transform:translateY(-12px) scale(1.02);box-shadow:0 20px 40px rgba(139,105,181,.25);}
   .card img{width:100%;height:auto;display:block;background:#f0e8f5;}
-  .card .info{padding:12px 16px;font-size:14px;background:linear-gradient(to top,rgba(255,255,255,0.95),white);}
-  .card .name{font-weight:500;margin-bottom:4px;}
-  .card .time{color:#aaa;font-size:12px;}
-  #overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,0.92);backdrop-filter:blur(10px);z-index:999;justify-content:center;align-items:center;flex-direction:column;gap:20px;padding:20px;}
-  #overlayImg{max-width:94%;max-height:86vh;border-radius:16px;box-shadow:0 20px 60px rgba(0,0,0,0.6);}
-  .overlay-nav{color:white;font-size:42px;cursor:pointer;user-select:none;padding:0 20px;opacity:0.8;}
-  .overlay-nav:hover{opacity:1;}
   .admin-bar{position:fixed;bottom:20px;right:20px;z-index:100;}
   .admin-btn{padding:12px 20px;background:rgba(139,105,181,0.9);color:white;border:none;border-radius:30px;cursor:pointer;backdrop-filter:blur(10px);box-shadow:0 8px 25px rgba(0,0,0,0.3);font-weight:bold;}
   .stats{text-align:center;margin:20px;color:#9a7bb0;font-size:14px;}
+
+  /* Google Drive 官方预览弹层 */
+  #overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,0.95);backdrop-filter:blur(15px);z-index:999;justify-content:center;align-items:center;padding:20px;cursor:pointer;}
+  #drivePreview{width:94vw;height:94vh;border:none;border-radius:16px;box-shadow:0 20px 60px rgba(0,0,0,0.8);}
 </style>
 </head>
 <body>
 <div id="particles"></div>
 <h1>爱丽丝庭院</h1>
-<p class="subtitle">Alice's Garden · 梦幻相册</p>
+<p class="subtitle">Alice's Garden · 梦幻相册（防盗版预览模式）</p>
 
 <div class="tabs" id="level1-tabs"></div>
 <div class="tabs" id="level2-tabs" style="display:none;"></div>
@@ -48,29 +45,24 @@
 <div class="stats" id="stats">加载中...</div>
 <div id="gallery"></div>
 
-<!-- 放大层 -->
-<div id="overlay">
-  <div class="overlay-nav" id="prevBtn">←</div>
-  <img id="overlayImg" src="" alt="">
-  <div class="overlay-nav" id="nextBtn">→</div>
+<!-- 使用 Google Drive 官方预览，彻底防下载 -->
+<div id="overlay" onclick="this.style.display='none'">
+  <iframe id="drivePreview" src="" allow="fullscreen"></iframe>
 </div>
 
-<!-- 管理员刷新按钮 -->
 <div class="admin-bar">
   <button class="admin-btn" onclick="refreshData()">刷新相册</button>
 </div>
 
 <script src="https://cdn.jsdelivr.net/npm/macy@2.5.1/dist/macy.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/particles.js@2.0.0/particles.min.js"></script>
-
 <script>
 // ==================== 配置区 ====================
 const WEB_APP_URL = 'https://script.google.com/macros/s/AKfycbzHKJJH59ZxDC8SP0lYNSPN6UgT_VBjuslqMvrO5TcJr6U7eay66wocyZMqtkqz4pTJ/exec';
 const REFRESH_TOKEN = 'AliceGarden_8f3k9xL2mPqR7tVy2025!';
 // ================================================
-
 let images = [];
-let currentPath = []; // ['GALLERY', 'DIY CARD', 'Weiß Schwarz']
+let currentPath = [];
 
 particlesJS('particles', {particles:{number:{value:60,density:{enable:true,value_area:800}},color:{value:['#d8b8f0','#b284d1','#e6f0fa']},shape:{type:'circle'},opacity:{value:0.4,random:true},size:{value:4,random:true},line_linked:{enable:false},move:{enable:true,speed:0.8,direction:'none',random:true}},interactivity:{detect_on:'canvas',events:{resize:true}}});
 
@@ -90,73 +82,52 @@ async function loadData() {
   }
 }
 
+/* 面包屑导航保持不变 */
 function buildBreadcrumbTabs() {
   const paths = [...new Set(images.map(i => i.folder))];
   const level1 = [...new Set(paths.map(p => p.split('/')[0]))].sort();
-  
   const l1 = document.getElementById('level1-tabs');
   const l2 = document.getElementById('level2-tabs');
   const l3 = document.getElementById('level3-tabs');
   l1.innerHTML = ''; l2.innerHTML = ''; l3.innerHTML = '';
   l2.style.display = 'none'; l3.style.display = 'none';
 
-  // 一级：GALLERY
   level1.forEach(folder => {
     const tab = document.createElement('div');
     tab.className = 'tab' + (currentPath[0] === folder ? ' active' : '');
     tab.textContent = folder;
-    tab.onclick = () => {
-      currentPath = [folder];
-      buildBreadcrumbTabs();
-      renderCurrentFolder();
-    };
+    tab.onclick = () => { currentPath = [folder]; buildBreadcrumbTabs(); renderCurrentFolder(); };
     l1.appendChild(tab);
   });
 
   if (currentPath.length >= 1) {
     const parent = images.filter(i => i.folder.startsWith(currentPath[0] + '/'));
-    const level2 = [...new Set(parent.map(i => i.folder.split('/').slice(0,2).join('/')))]
-      .filter(p => p !== currentPath[0]);
-    l2.style.display = 'flex';
-    level2.forEach(folder => {
+    const level2 = [...new Set(parent.map(i => i.folder.split('/').slice(0,2).join('/')))].filter(p => p !== currentPath[0]);
+    if (level2.length > 0) { l2.style.display = 'flex'; level2.forEach(folder => { /* 同上 */ 
       const name = folder.split('/')[1];
       const tab = document.createElement('div');
       tab.className = 'tab' + (currentPath[1] === name ? ' active' : '');
       tab.textContent = name;
-      tab.onclick = () => {
-        currentPath = [currentPath[0], name];
-        buildBreadcrumbTabs();
-        renderCurrentFolder();
-      };
+      tab.onclick = () => { currentPath = [currentPath[0], name]; buildBreadcrumbTabs(); renderCurrentFolder(); };
       l2.appendChild(tab);
-    });
-  }
-
+    });}}
   if (currentPath.length >= 2) {
     const parent = images.filter(i => i.folder.startsWith(currentPath.slice(0,2).join('/') + '/'));
-    const level3 = [...new Set(parent.map(i => i.folder.split('/').slice(0,3).join('/')))]
-      .filter(p => p !== currentPath.slice(0,2).join('/'));
-    if (level3.length > 0) {
-      l3.style.display = 'flex';
-      level3.forEach(folder => {
-        const name = folder.split('/')[2];
-        const tab = document.createElement('div');
-        tab.className = 'tab' + (currentPath[2] === name ? ' active' : '');
-        tab.textContent = name;
-        tab.onclick = () => {
-          currentPath = [currentPath[0], currentPath[1], name];
-          renderCurrentFolder();
-        };
-        l3.appendChild(tab);
-      });
-    }
-  }
+    const level3 = [...new Set(parent.map(i => i.folder.split('/').slice(0,3).join('/')))].filter(p => p !== currentPath.slice(0,2).join('/'));
+    if (level3.length > 0) { l3.style.display = 'flex'; level3.forEach(folder => {
+      const name = folder.split('/')[2];
+      const tab = document.createElement('div');
+      tab.className = 'tab' + (currentPath[2] === name ? ' active' : '');
+      tab.textContent = name;
+      tab.onclick = () => { currentPath = [currentPath[0], currentPath[1], name]; buildBreadcrumbTabs(); renderCurrentFolder(); };
+      l3.appendChild(tab);
+    });}}
 }
 
 function renderCurrentFolder() {
   const gallery = document.getElementById('gallery');
   gallery.innerHTML = '';
-  
+
   let currentImages = images;
   if (currentPath.length > 0) {
     const prefix = currentPath.join('/');
@@ -164,23 +135,23 @@ function renderCurrentFolder() {
   }
 
   if (currentImages.length === 0) {
-    gallery.innerHTML = '<p style="text-align:center;color:#aaa;margin:60px">空空如也～</p>';
+    gallery.innerHTML = '<p style="text-align:center;color:#aaa;margin:60px;font-size:1.2em;">空空如也～</p>';
     return;
   }
 
-  currentImages.forEach((img, idx) => {
-    const isDeepest = currentPath.length >= 2 && img.folder.split('/').length === currentPath.length;
+  currentImages.forEach(img => {
     const card = document.createElement('div');
     card.className = 'card';
-    card.innerHTML = `
-      <img src="${img.thumbLink}" loading="lazy" alt="${img.fileName}"
-           onerror="this.src='data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMzAwIiBoZWlnaHQ9IjIwMCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48cmVjdCB3aWR0aD0iMTAwJSIgaGVpZ2h0PSIxMDAlIiBmaWxsPSIjZjBlOGY1Ii8+PHRleHQgeD0iNTAlIiB5PSI1MCUiIGZvbnQtc2l6ZT0iMjAiIHRleHQtYW5jaG9yPSJtaWRkbGUiIGR5PSIuM2VtIiBmaWxsPSIjYWFhIj7otKjnirXlj4zkuLngkI3kuLngkI4gPC90ZXh0Pjwvc3ZnPg=='">
-      ${!isDeepest ? `<div class="info">
-        <div class="name">${img.fileName}</div>
-        <div class="time">${new Date(img.modifiedTime).toLocaleDateString('zh-CN')}</div>
-      </div>` : ''}
-    `;
-    card.onclick = () => openLightbox(currentImages, idx);
+    card.innerHTML = `<img src="${img.thumb}" loading="lazy" alt="">`;
+    
+    // 关键：点击后用 Google Drive 官方预览 iframe 打开
+    card.onclick = (e) => {
+      e.stopPropagation();
+      const fileId = img.direct.match(/id=([^&]+)/)[1];  // 从 uc?export=view&id=xxx 提取 id
+      const previewUrl = `https://drive.google.com/file/d/${fileId}/preview`;
+      document.getElementById('drivePreview').src = previewUrl;
+      document.getElementById('overlay').style.display = 'flex';
+    };
     gallery.appendChild(card);
   });
 
@@ -191,25 +162,6 @@ function updateStats() {
   document.getElementById('stats').textContent = 
     `共 ${images.length} 张照片${currentPath.length > 0 ? ` · 当前：${currentPath.join(' → ')}` : ''}`;
 }
-
-function openLightbox(list, index) {
-  currentIndex = index;
-  const img = list[index];
-  document.getElementById('overlayImg').src = img.directLink; // 强制使用高清原图！
-  document.getElementById('overlay').style.display = 'flex';
-}
-
-document.getElementById('overlay').onclick = e => {
-  if (e.target.id === 'overlay') document.getElementById('overlay').style.display = 'none';
-};
-document.getElementById('prevBtn').onclick = () => {
-  currentIndex = (currentIndex - 1 + images.length) % images.length;
-  openLightbox(images.filter(i => i.folder === currentPath.join('/') || i.folder.startsWith(currentPath.join('/') + '/')), currentIndex);
-};
-document.getElementById('nextBtn').onclick = () => {
-  currentIndex = (currentIndex + 1) % images.length;
-  openLightbox(images.filter(i => i.folder === currentPath.join('/') || i.folder.startsWith(currentPath.join('/') + '/')), currentIndex);
-};
 
 async function refreshData() {
   if (!confirm('确定要刷新相册数据吗？')) return;
