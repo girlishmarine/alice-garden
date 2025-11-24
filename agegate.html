@@ -20,7 +20,6 @@
     position:relative;
   }
 
-  /* 粒子/花瓣动画层 */
   #particles {
     position: absolute;
     inset:0;
@@ -72,7 +71,6 @@
     box-shadow: 0 10px 25px rgba(139,105,181,.3);
   }
 
-  /* 浮动小花瓣/光点动画 */
   .particle {
     position:absolute;
     width:12px;
@@ -111,26 +109,18 @@
 <script>
 const targetURL = 'https://girlishmarine.github.io/alice-garden/alicegardengallery.html';
 
-// 确认已成年
 function enterSite(){
-  localStorage.setItem('isAdult','true');
   window.location.href = targetURL;
 }
 
-// 未成年跳出
 function exitSite(){
   alert('您未满18岁，无法访问 / You are not 18+, access denied.');
   window.location.href = 'https://www.google.com';
 }
 
-// 自动跳过
-if(localStorage.getItem('isAdult')==='true'){
-  window.location.href = targetURL;
-}
-
 // ================== 粒子/花瓣动画 ==================
 const particlesContainer = document.getElementById('particles');
-for(let i=0;i<30;i++){ // 生成30个花瓣粒子
+for(let i=0;i<30;i++){ 
   const p = document.createElement('div');
   p.className='particle';
   p.style.left = Math.random()*100+'vw';
