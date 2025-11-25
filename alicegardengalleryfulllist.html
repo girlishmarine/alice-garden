@@ -17,8 +17,6 @@
   .tab{padding:10px 20px;background:rgba(255,255,255,0.7);backdrop-filter:blur(10px);border-radius:30px;cursor:pointer;transition:all .3s;font-weight:500;box-shadow:0 4px 15px rgba(0,0,0,.1);}
   .tab:hover{transform:translateY(-3px);}
   .tab.active{background:var(--primary);color:white;box-shadow:0 8px 25px rgba(198,137,216,.4);}
-
-  /* 原生 column 瀑布流，彻底告别错位 */
   #gallery{
     column-count:2;
     column-gap:20px;
@@ -29,7 +27,6 @@
   @media(min-width:768px){#gallery{column-count:3;}}
   @media(min-width:1024px){#gallery{column-count:4;}}
   @media(min-width:1400px){#gallery{column-count:5;}}
-
   .card{
     display:inline-block;
     width:100%;
@@ -39,7 +36,7 @@
     overflow:hidden;
     box-shadow:0 8px 25px rgba(0,0,0,.12);
     transition:all .4s cubic-bezier(0.175,0.885,0.32,1.1);
-    break-inside:avoid; /* 关键：防止卡片被列截断 */
+    break-inside:avoid;
     cursor:pointer;
   }
   .card:hover{
@@ -52,11 +49,9 @@
     display:block;
     background:#f0e8f5;
   }
-
   .admin-bar{position:fixed;bottom:20px;right:20px;z-index:100;}
   .admin-btn{padding:12px 20px;background:rgba(139,105,181,0.9);color:white;border:none;border-radius:30px;cursor:pointer;backdrop-filter:blur(10px);box-shadow:0 8px 25px rgba(0,0,0,0.3);font-weight:bold;}
   .stats{text-align:center;margin:20px 0 30px;color:#9a7bb0;font-size:14px;}
-
   #overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,0.95);backdrop-filter:blur(15px);z-index:999;justify-content:center;align-items:center;padding:20px;cursor:pointer;flex-direction:column;gap:15px;}
   #drivePreview{width:94vw;height:94vh;border:none;border-radius:16px;box-shadow:0 20px 60px rgba(0,0,0,0.8);}
   .close-btn{position:absolute;top:20px;right:30px;width:50px;height:50px;background:rgba(255,255,255,0.15);backdrop-filter:blur(10px);border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:28px;color:white;cursor:pointer;z-index:1000;transition:all .3s;}
@@ -64,15 +59,12 @@
 </style>
 </head>
 <body>
-
 <div id="particles"></div>
 <h1>爱丽丝庭院</h1>
 <p class="subtitle">Alice's Garden · 梦幻相册（防盗版预览模式）</p>
-
 <div class="tabs" id="level1-tabs"></div>
 <div class="tabs" id="level2-tabs" style="display:none;"></div>
 <div class="tabs" id="level3-tabs" style="display:none;"></div>
-
 <div class="stats" id="stats">加载中...</div>
 <div id="gallery"></div>
 
@@ -94,6 +86,11 @@ const REFRESH_TOKEN = 'AliceGarden_8f3k9xL2mPqR7tVy2025!';
 
 let images = [];
 let currentPath = [];
+
+// 新增：分批加载控制变量
+const BATCH_SIZE = 50;
+let currentIndex = 0;
+let currentFolderImages = []; // 当前文件夹所有图片（用于分页）
 
 particlesJS('particles', {
   particles: {
@@ -136,7 +133,6 @@ async function loadData() {
 function buildBreadcrumbTabs() {
   const paths = [...new Set(images.map(i => i.folder))];
   const level1 = [...new Set(paths.map(p => p.split('/')[0]))].sort();
-
   const l1 = document.getElementById('level1-tabs');
   const l2 = document.getElementById('level2-tabs');
   const l3 = document.getElementById('level3-tabs');
@@ -185,24 +181,41 @@ function buildBreadcrumbTabs() {
   }
 }
 
+// =================== 核心优化：分批渲染 ===================
 function renderCurrentFolder() {
   const gallery = document.getElementById('gallery');
   gallery.innerHTML = '';
+  currentIndex = 0;  // 重置分页
 
-  let currentImages = images;
+  let filtered = images;
   if (currentPath.length > 0) {
     const prefix = currentPath.join('/');
-    currentImages = images.filter(i => i.folder === prefix || i.folder.startsWith(prefix + '/'));
+    filtered = images.filter(i => i.folder === prefix || i.folder.startsWith(prefix + '/'));
   }
 
-  if (currentImages.length === 0) {
+  currentFolderImages = filtered;  // 全局保存当前文件夹图片列表
+
+  if (currentFolderImages.length === 0) {
     gallery.innerHTML = '<p style="text-align:center;color:#aaa;margin:80px;font-size:1.3em;">空空如也～</p>';
+    document.getElementById('more-btn')?.remove();
     return;
   }
 
+  loadMoreImages();     // 首次加载50张
+  createMoreButton(); // 创建/更新 MORE 按钮
+}
+
+function loadMoreImages() {
+  const gallery = document.getElementById('gallery');
+
+  const start = currentIndex;
+  const end = Math.min(currentIndex + BATCH_SIZE, currentFolderImages.length);
+  currentIndex = end;
+
   const fragment = document.createDocumentFragment();
 
-  currentImages.forEach(img => {
+  for (let i = start; i < end; i++) {
+    const img = currentFolderImages[i];
     const card = document.createElement('div');
     card.className = 'card';
 
@@ -212,11 +225,8 @@ function renderCurrentFolder() {
     image.alt = '';
 
     image.onload = image.onerror = () => {
-      // 图片加载完成或失败都强制浏览器重新布局（解决懒加载导致的错位）
       gallery.style.columnCount = '1';
-      requestAnimationFrame(() => {
-        gallery.style.columnCount = ''; // 恢复原始值，触发重排
-      });
+      requestAnimationFrame(() => gallery.style.columnCount = '');
     };
 
     card.appendChild(image);
@@ -230,20 +240,63 @@ function renderCurrentFolder() {
     };
 
     fragment.appendChild(card);
-  });
+  }
 
   gallery.appendChild(fragment);
 
-  // 首次渲染也保险起见再强制一次重排
+  // 全部加载完就隐藏按钮
+  if (currentIndex >= currentFolderImages.length) {
+    document.getElementById('more-btn')?.remove();
+  }
+
+  // 保险重排
   setTimeout(() => {
     gallery.style.columnCount = '1';
     requestAnimationFrame(() => gallery.style.columnCount = '');
-  }, 300);
+  }, 100);
 }
 
+function createMoreButton() {
+  let old = document.getElementById('more-btn');
+  if (old) old.remove();
+
+  if (currentIndex >= currentFolderImages.length) return;
+
+  const btn = document.createElement('button');
+  btn.id = 'more-btn';
+  btn.textContent = `MORE（剩余 ${currentFolderImages.length - currentIndex} 张）`;
+  btn.style.cssText = `
+    width: 86%;
+    max-width: 520px;
+    margin: 50px auto;
+    display: block;
+    padding: 20px;
+    font-size: 24px;
+    font-weight: bold;
+    border-radius: 16px;
+    background: linear-gradient(90deg, #c689d8, #a06cd5);
+    color: white;
+    border: none;
+    cursor: pointer;
+    box-shadow: 0 10px 30px rgba(198,137,216,0.4);
+    transition: all 0.3s;
+  `;
+  btn.onmouseover = () => btn.style.transform = 'translateY(-4px)';
+  btn.onmouseout  = () => btn.style.transform = '';
+  btn.onclick = loadMoreImages;
+
+  document.body.appendChild(btn);
+}
+
+// ====================================================
+
 function updateStats() {
+  const totalInFolder = currentPath.length > 0 
+    ? images.filter(i => i.folder.startsWith(currentPath.join('/') + (currentPath.length > 0 ? '/' : ''))).length 
+    : images.length;
+
   document.getElementById('stats').textContent =
-    `共 ${images.length} 张照片${currentPath.length > 0 ? ` · 当前：${currentPath.join(' → ')}` : ''}`;
+    `共 ${images.length} 张照片${currentPath.length > 0 ? ` · 当前文件夹：${totalInFolder} 张 · 已加载：${currentIndex} 张` : ''}`;
 }
 
 async function refreshData() {
